@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WalkLog - 散歩の記録</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WalkLog</h1>
+            <p class="subtitle">散歩の記録を美しく残す</p>
+        </header>
+
+        <main>
+            <!-- Walk Dashboard (Time and Distance) -->
+            <div id="walk-dashboard" class="glass-card hidden">
+                <div class="dashboard-grid">
+                    <div class="dashboard-item">
+                        <span class="label">経過時間</span>
+                        <span id="elapsed-time" class="value large">00:00:00</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="label">移動距離</span>
+                        <span id="total-distance" class="value large">0 メートル</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map-container" class="glass-card hidden">
+                <div id="map"></div>
+            </div>
+
+            <div id="display-area" class="glass-card hidden">
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <span class="label">緯度 (Lat)</span>
+                        <span id="latitude" class="value">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">経度 (Lng)</span>
+                        <span id="longitude" class="value">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">精度 (Acc)</span>
+                        <span id="accuracy" class="value">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="get-location-btn">現在地を確認</button>
+                <div class="walk-controls">
+                    <button id="start-walk-btn" class="btn-blue">散歩開始</button>
+                    <button id="end-walk-btn" class="btn-red hidden">散歩終了</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 WalkLog Project</p>
+        </footer>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="script.js"></script>
+</body>
+</html>
