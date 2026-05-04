@@ -3,9 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const getLocBtn = document.getElementById('get-location-btn');
     const startWalkBtn = document.getElementById('start-walk-btn');
     const endWalkBtn = document.getElementById('end-walk-btn');
+    const takePhotoBtn = document.getElementById('take-photo-btn');
+    const cameraInput = document.getElementById('camera-input');
+    
     const dashboard = document.getElementById('walk-dashboard');
     const mapContainer = document.getElementById('map-container');
     const displayArea = document.getElementById('display-area');
+    const photoControls = document.getElementById('photo-controls');
     
     const latElement = document.getElementById('latitude');
     const lngElement = document.getElementById('longitude');
@@ -22,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerId = null;
     let routeCoords = [];
     let totalDistance = 0;
+    let currentLat = null;
+    let currentLng = null;
 
     // --- Helper Functions ---
 
@@ -42,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDashboard(latitude, longitude, accuracy) {
+        currentLat = latitude;
+        currentLng = longitude;
         latElement.textContent = latitude.toFixed(6);
         lngElement.textContent = longitude.toFixed(6);
         accElement.textContent = `${Math.round(accuracy)}m`;
@@ -96,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (polyline) polyline.setLatLngs([]);
         
         dashboard.classList.remove('hidden');
+        photoControls.classList.remove('hidden');
         startWalkBtn.classList.add('hidden');
         endWalkBtn.classList.remove('hidden');
         getLocBtn.classList.add('hidden');
@@ -104,8 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         watchId = navigator.geolocation.watchPosition((pos) => {
             const { latitude, longitude, accuracy } = pos.coords;
-            
-            // 精度が極端に悪い場合はスキップ（ノイズ対策）
             if (accuracy > 50) return;
 
             initMap(latitude, longitude);
@@ -115,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
             routeCoords.push(newCoord);
             polyline.addLatLng(newCoord);
 
-            // 距離計算
             if (routeCoords.length > 1) {
                 totalDistance += calculateDistance(latitude, longitude);
                 distElement.textContent = `${Math.round(totalDistance)} メートル`;
@@ -136,12 +142,49 @@ document.addEventListener('DOMContentLoaded', () => {
         startWalkBtn.classList.remove('hidden');
         endWalkBtn.classList.add('hidden');
         getLocBtn.classList.remove('hidden');
+        photoControls.classList.add('hidden');
 
-        // 全ルートが表示されるように調整
         if (polyline && routeCoords.length > 0) {
             map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
         }
 
         alert('散歩を終了しました！お疲れ様でした。');
     });
+
+    // 4. Take Photo
+    takePhotoBtn.addEventListener('click', () => {
+        cameraInput.click();
+    });
+
+    cameraInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imageUrl = event.target.result;
+            addPhotoMarker(imageUrl, currentLat, currentLng);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function addPhotoMarker(url, lat, lng) {
+        if (lat === null || lng === null) return;
+
+        const icon = L.divIcon({
+            className: 'photo-marker',
+            html: `<img src="${url}" />`,
+            iconSize: [60, 60],
+            iconAnchor: [30, 30]
+        });
+
+        L.marker([lat, lng], { icon: icon })
+            .addTo(map)
+            .bindPopup(`<img src="${url}" style="width:100%; border-radius:8px; margin-top:8px;" /><p style="margin-top:8px; text-align:center;">撮影場所</p>`, {
+                maxWidth: 200
+            });
+            
+        // ピンの場所に少しズームして移動
+        map.setView([lat, lng], 17);
+    }
 });
