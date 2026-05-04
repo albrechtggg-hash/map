@@ -1,5 +1,35 @@
+// --- Firebase Configuration ---
+// ※以下はプレースホルダーです。Firebaseコンソールから取得した設定に置き換えてください。
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// --- Authorization Allowlist ---
+// ログインを許可するメールアドレスのリスト
+const ALLOWED_EMAILS = [
+    "albrechtggg@gmail.com", // あなたのアドレス
+    "test@example.com"      // 追加したいアドレス
+];
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
 document.addEventListener('DOMContentLoaded', () => {
-    // UI Elements
+    // Auth UI Elements
+    const loginScreen = document.getElementById('login-screen');
+    const appContainer = document.getElementById('app-container');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userEmailSpan = document.getElementById('user-email');
+    const loginError = document.getElementById('login-error');
+
+    // App UI Elements
     const getLocBtn = document.getElementById('get-location-btn');
     const startWalkBtn = document.getElementById('start-walk-btn');
     const endWalkBtn = document.getElementById('end-walk-btn');
@@ -29,7 +59,44 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLat = null;
     let currentLng = null;
 
-    // --- Helper Functions ---
+    // --- Authentication Logic ---
+
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            if (ALLOWED_EMAILS.includes(user.email)) {
+                // Login successful and authorized
+                loginScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                loginError.classList.add('hidden');
+            } else {
+                // Logged in but NOT authorized
+                auth.signOut();
+                loginError.textContent = "このアカウントは許可されていません。";
+                loginError.classList.remove('hidden');
+            }
+        } else {
+            // Not logged in
+            loginScreen.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+        }
+    });
+
+    googleLoginBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch((error) => {
+            loginError.textContent = "ログインエラー: " + error.message;
+            loginError.classList.remove('hidden');
+        });
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        if (confirm('ログアウトしますか？')) {
+            auth.signOut();
+        }
+    });
+
+    // --- WalkLog Logic ---
 
     function initMap(lat, lng) {
         if (map === null) {
@@ -80,9 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('walklog_total_distance', totalDistance);
     }
 
-    // --- Event Handlers ---
-
-    // 1. One-time Location Check
     getLocBtn.addEventListener('click', () => {
         if (!navigator.geolocation) return alert('GPS非対応です');
         navigator.geolocation.getCurrentPosition((pos) => {
@@ -92,41 +156,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }, (err) => alert('取得失敗: ' + err.message));
     });
 
-    // 2. Start Walk
     startWalkBtn.addEventListener('click', () => {
         if (!navigator.geolocation) return alert('GPS非対応です');
-
-        // Reset State
         routeCoords = [];
         totalDistance = 0;
         distElement.textContent = '0 メートル';
         timeElement.textContent = '00:00:00';
         if (polyline) polyline.setLatLngs([]);
-        
         dashboard.classList.remove('hidden');
         photoControls.classList.remove('hidden');
         startWalkBtn.classList.add('hidden');
         endWalkBtn.classList.remove('hidden');
         getLocBtn.classList.add('hidden');
-
         startTimer();
-
         watchId = navigator.geolocation.watchPosition((pos) => {
             const { latitude, longitude, accuracy } = pos.coords;
             if (accuracy > 50) return;
-
             initMap(latitude, longitude);
             updateDashboard(latitude, longitude, accuracy);
-
             const newCoord = [latitude, longitude];
             routeCoords.push(newCoord);
             polyline.addLatLng(newCoord);
-
             if (routeCoords.length > 1) {
                 totalDistance += calculateDistance(latitude, longitude);
                 distElement.textContent = `${Math.round(totalDistance)} メートル`;
             }
-
             saveToLocalStorage();
         }, (err) => console.error(err), {
             enableHighAccuracy: true,
@@ -134,24 +188,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. End Walk
     endWalkBtn.addEventListener('click', () => {
         if (watchId) navigator.geolocation.clearWatch(watchId);
         if (timerId) clearInterval(timerId);
-
         startWalkBtn.classList.remove('hidden');
         endWalkBtn.classList.add('hidden');
         getLocBtn.classList.remove('hidden');
         photoControls.classList.add('hidden');
-
         if (polyline && routeCoords.length > 0) {
             map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
         }
-
         alert('散歩を終了しました！お疲れ様でした。');
     });
 
-    // 4. Take Photo
     takePhotoBtn.addEventListener('click', () => {
         cameraInput.click();
     });
@@ -159,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cameraInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (event) => {
             const imageUrl = event.target.result;
@@ -170,21 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addPhotoMarker(url, lat, lng) {
         if (lat === null || lng === null) return;
-
         const icon = L.divIcon({
             className: 'photo-marker',
             html: `<img src="${url}" />`,
             iconSize: [60, 60],
             iconAnchor: [30, 30]
         });
-
-        L.marker([lat, lng], { icon: icon })
-            .addTo(map)
+        L.marker([lat, lng], { icon: icon }).addTo(map)
             .bindPopup(`<img src="${url}" style="width:100%; border-radius:8px; margin-top:8px;" /><p style="margin-top:8px; text-align:center;">撮影場所</p>`, {
                 maxWidth: 200
             });
-            
-        // ピンの場所に少しズームして移動
         map.setView([lat, lng], 17);
     }
 });
